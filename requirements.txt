@@ -4,3 +4,4 @@ pandas
 matplotlib
 leafmap
 folium
+openpyxl
