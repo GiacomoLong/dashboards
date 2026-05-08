@@ -5,3 +5,4 @@ matplotlib
 leafmap
 folium
 openpyxl
+mapclassify
