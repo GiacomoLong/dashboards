@@ -12,6 +12,7 @@ gestione del rischio caldo.
 - **Mappa interattiva**: confine comunale, parchi, aree nuoto e fontanelle
 
 Dati meteo: Open-Meteo – Forecast and Historical Weather API https://open-meteo.com
+
 Dati geografici: OpenStreetMap via osmnx https://www.openstreetmap.org
 
 ---
@@ -28,4 +29,5 @@ historical climate analysis and geographic maps to support heat risk management.
 - **Interactive map**: municipal boundary, parks, swimming areas and drinking fountains
 
 Weather data: Open-Meteo – Forecast and Historical Weather API https://open-meteo.com
+
 Geographic data: OpenStreetMap via osmnx https://www.openstreetmap.org
