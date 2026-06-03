@@ -178,15 +178,7 @@ def dati_orari(LAT, LON):
 
 @st.cache_data(ttl=86400)
 def profilo_medio_storico(anni, LAT, LON):
-    # Nome file univoco per città
-    fname = f"cache_profilo_{LAT}_{LON}_{OGGI.strftime('%m%d')}.csv"
-
-    # Se esiste già il CSV lo carica direttamente — 0 chiamate API
-    if os.path.exists(fname):
-        df = pd.read_csv(fname)
-        return df
-
-    # Altrimenti scarica con una sola chiamata (non 10)
+    """Una sola chiamata API — nessun CSV, nessun loop."""
     start = (OGGI.replace(year=OGGI.year - anni)).strftime("%Y-%m-%d")
     end   = (OGGI - timedelta(days=1)).strftime("%Y-%m-%d")
 
@@ -201,42 +193,32 @@ def profilo_medio_storico(anni, LAT, LON):
         r = requests.get(url, timeout=30)
         r.raise_for_status()
         data = r.json()
+
         df = pd.DataFrame({
             "ora":    data["hourly"]["time"],
             "t_aria": data["hourly"]["temperature_2m"],
         })
         df["ora"] = pd.to_datetime(df["ora"])
-
-        # Filtra solo giorno odierno di ogni anno
         df = df[
             (df["ora"].dt.month == OGGI.month) &
             (df["ora"].dt.day   == OGGI.day)
         ]
-
         df["hour"] = df["ora"].dt.hour
         profilo = df.groupby("hour")["t_aria"].mean().round(1).reset_index()
         profilo.columns = ["hour", "t_media_storica"]
-
-        # Salva su disco
-        profilo.to_csv(fname, index=False)
         return profilo
 
     except Exception as e:
-        st.error(f"Errore storico orario: {e}")
+        st.error(f"Errore: {e}")
         return None
-
 
 @st.cache_data(ttl=86400)
 def media_storica_finestra(anni, finestra, LAT, LON):
-    fname = f"cache_finestra_{LAT}_{LON}_{OGGI.strftime('%m%d')}.csv"
-
-    if os.path.exists(fname):
-        df = pd.read_csv(fname, parse_dates=["data"])
-        return df
-
-    # Unica chiamata per ±15 giorni su 10 anni
-    start = (OGGI.replace(year=OGGI.year - anni) - timedelta(days=finestra)).strftime("%Y-%m-%d")
-    end   = (OGGI - timedelta(days=1)).strftime("%Y-%m-%d")
+    """Una sola chiamata API — nessun CSV, nessun loop."""
+    start = (
+        OGGI.replace(year=OGGI.year - anni) - timedelta(days=finestra)
+    ).strftime("%Y-%m-%d")
+    end = (OGGI - timedelta(days=1)).strftime("%Y-%m-%d")
 
     url = (
         "https://archive-api.open-meteo.com/v1/archive"
@@ -249,6 +231,7 @@ def media_storica_finestra(anni, finestra, LAT, LON):
         r = requests.get(url, timeout=30)
         r.raise_for_status()
         data = r.json()
+
         df = pd.DataFrame({
             "data":    data["daily"]["time"],
             "t_max":   data["daily"]["temperature_2m_max"],
@@ -256,30 +239,26 @@ def media_storica_finestra(anni, finestra, LAT, LON):
             "t_media": data["daily"]["temperature_2m_mean"],
         })
         df["data"] = pd.to_datetime(df["data"])
-
-        # Filtra solo i giorni nella finestra ±15 per ogni anno
-        df["mese_giorno"] = df["data"].dt.strftime("%m-%d")
-        date_valide = [
-            (OGGI.replace(year=OGGI.year - a) + timedelta(days=d)).strftime("%m-%d")
-            for a in range(anni)
-            for d in range(-finestra, finestra + 1)
-        ]
-        df = df[df["mese_giorno"].isin(date_valide)]
-
-        # Calcola offset rispetto a oggi
-        df["offset_gg"] = (df["data"] - pd.Timestamp(OGGI)).dt.days
-        df = df[df["offset_gg"].between(-finestra, finestra)]
-
-        profilo = df.groupby("offset_gg")[["t_max", "t_min", "t_media"]].mean().round(1).reset_index()
-        profilo["data"] = profilo["offset_gg"].apply(lambda x: OGGI + timedelta(days=x))
-
-        profilo.to_csv(fname, index=False)
+        df["offset_vs_oggi"] = df["data"].apply(
+            lambda d: (
+                d - pd.Timestamp(OGGI.replace(year=d.year))
+            ).days
+        )
+        df = df[df["offset_vs_oggi"].between(-finestra, finestra)]
+        profilo = (
+            df.groupby("offset_vs_oggi")[["t_max", "t_min", "t_media"]]
+            .mean().round(1).reset_index()
+        )
+        profilo.rename(columns={"offset_vs_oggi": "offset_gg"}, inplace=True)
+        profilo["data"] = profilo["offset_gg"].apply(
+            lambda x: OGGI + timedelta(days=x)
+        )
         return profilo
 
     except Exception as e:
-        st.error(f"Errore storico giornaliero: {e}")
+        st.error(f"Errore: {e}")
         return None
-
+        
 @st.cache_data(ttl=3600)
 def dati_ultimi_15gg(LAT, LON):
     start = (OGGI - timedelta(days=FINESTRA)).strftime("%Y-%m-%d")
