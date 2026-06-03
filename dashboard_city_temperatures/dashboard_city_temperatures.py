@@ -178,39 +178,107 @@ def dati_orari(LAT, LON):
 
 @st.cache_data(ttl=86400)
 def profilo_medio_storico(anni, LAT, LON):
-    mese_giorno = OGGI.strftime("%m-%d")
-    tutti = []
-    for anno in range(OGGI.year - anni, OGGI.year):
-        giorno = f"{anno}-{mese_giorno}"
-        url = (
-            "https://archive-api.open-meteo.com/v1/archive"
-            f"?latitude={LAT}&longitude={LON}"
-            f"&start_date={giorno}&end_date={giorno}"
-            "&hourly=temperature_2m"
-            "&timezone=Europe%2FRome"
-        )
-        try:
-            r = requests.get(url, timeout=10)
-            r.raise_for_status()
-            data = r.json()
-            df = pd.DataFrame({
-                "ora": data["hourly"]["time"],
-                "t_aria": data["hourly"]["temperature_2m"],
-                "anno": anno,
-            })
-            df["ora"] = pd.to_datetime(df["ora"])
-            tutti.append(df)
-        except Exception as e:
-            continue
-        time.sleep(0.4)
-        
-    if not tutti:
+    # Nome file univoco per città
+    fname = f"cache_profilo_{LAT}_{LON}_{OGGI.strftime('%m%d')}.csv"
+
+    # Se esiste già il CSV lo carica direttamente — 0 chiamate API
+    if os.path.exists(fname):
+        df = pd.read_csv(fname)
+        return df
+
+    # Altrimenti scarica con una sola chiamata (non 10)
+    start = (OGGI.replace(year=OGGI.year - anni)).strftime("%Y-%m-%d")
+    end   = (OGGI - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    url = (
+        "https://archive-api.open-meteo.com/v1/archive"
+        f"?latitude={LAT}&longitude={LON}"
+        f"&start_date={start}&end_date={end}"
+        "&hourly=temperature_2m"
+        "&timezone=Europe%2FRome"
+    )
+    try:
+        r = requests.get(url, timeout=30)
+        r.raise_for_status()
+        data = r.json()
+        df = pd.DataFrame({
+            "ora":    data["hourly"]["time"],
+            "t_aria": data["hourly"]["temperature_2m"],
+        })
+        df["ora"] = pd.to_datetime(df["ora"])
+
+        # Filtra solo giorno odierno di ogni anno
+        df = df[
+            (df["ora"].dt.month == OGGI.month) &
+            (df["ora"].dt.day   == OGGI.day)
+        ]
+
+        df["hour"] = df["ora"].dt.hour
+        profilo = df.groupby("hour")["t_aria"].mean().round(1).reset_index()
+        profilo.columns = ["hour", "t_media_storica"]
+
+        # Salva su disco
+        profilo.to_csv(fname, index=False)
+        return profilo
+
+    except Exception as e:
+        st.error(f"Errore storico orario: {e}")
         return None
-    df_tutti = pd.concat(tutti, ignore_index=True)
-    df_tutti["hour"] = df_tutti["ora"].dt.hour
-    profilo = df_tutti.groupby("hour")["t_aria"].mean().round(1).reset_index()
-    profilo.columns = ["hour", "t_media_storica"]
-    return profilo
+
+
+@st.cache_data(ttl=86400)
+def media_storica_finestra(anni, finestra, LAT, LON):
+    fname = f"cache_finestra_{LAT}_{LON}_{OGGI.strftime('%m%d')}.csv"
+
+    if os.path.exists(fname):
+        df = pd.read_csv(fname, parse_dates=["data"])
+        return df
+
+    # Unica chiamata per ±15 giorni su 10 anni
+    start = (OGGI.replace(year=OGGI.year - anni) - timedelta(days=finestra)).strftime("%Y-%m-%d")
+    end   = (OGGI - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    url = (
+        "https://archive-api.open-meteo.com/v1/archive"
+        f"?latitude={LAT}&longitude={LON}"
+        f"&start_date={start}&end_date={end}"
+        "&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean"
+        "&timezone=Europe%2FRome"
+    )
+    try:
+        r = requests.get(url, timeout=30)
+        r.raise_for_status()
+        data = r.json()
+        df = pd.DataFrame({
+            "data":    data["daily"]["time"],
+            "t_max":   data["daily"]["temperature_2m_max"],
+            "t_min":   data["daily"]["temperature_2m_min"],
+            "t_media": data["daily"]["temperature_2m_mean"],
+        })
+        df["data"] = pd.to_datetime(df["data"])
+
+        # Filtra solo i giorni nella finestra ±15 per ogni anno
+        df["mese_giorno"] = df["data"].dt.strftime("%m-%d")
+        date_valide = [
+            (OGGI.replace(year=OGGI.year - a) + timedelta(days=d)).strftime("%m-%d")
+            for a in range(anni)
+            for d in range(-finestra, finestra + 1)
+        ]
+        df = df[df["mese_giorno"].isin(date_valide)]
+
+        # Calcola offset rispetto a oggi
+        df["offset_gg"] = (df["data"] - pd.Timestamp(OGGI)).dt.days
+        df = df[df["offset_gg"].between(-finestra, finestra)]
+
+        profilo = df.groupby("offset_gg")[["t_max", "t_min", "t_media"]].mean().round(1).reset_index()
+        profilo["data"] = profilo["offset_gg"].apply(lambda x: OGGI + timedelta(days=x))
+
+        profilo.to_csv(fname, index=False)
+        return profilo
+
+    except Exception as e:
+        st.error(f"Errore storico giornaliero: {e}")
+        return None
 
 @st.cache_data(ttl=3600)
 def dati_ultimi_15gg(LAT, LON):
@@ -261,48 +329,6 @@ def dati_oggi(LAT, LON):
         return df
     except Exception as e:
         return None
-
-@st.cache_data(ttl=86400)
-def media_storica_finestra(anni, finestra, LAT, LON):
-    tutti = []
-    for anno in range(OGGI.year - anni, OGGI.year):
-        try:
-            data_ref = OGGI.replace(year=anno)
-        except ValueError:
-            continue
-        start = (data_ref - timedelta(days=finestra)).strftime("%Y-%m-%d")
-        end = (data_ref + timedelta(days=finestra)).strftime("%Y-%m-%d")
-        url = (
-            "https://archive-api.open-meteo.com/v1/archive"
-            f"?latitude={LAT}&longitude={LON}"
-            f"&start_date={start}&end_date={end}"
-            "&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean"
-            "&timezone=Europe%2FRome"
-        )
-        try:
-            r = requests.get(url, timeout=10)
-            r.raise_for_status()
-            data = r.json()
-            df = pd.DataFrame({
-                "data": data["daily"]["time"],
-                "t_max": data["daily"]["temperature_2m_max"],
-                "t_min": data["daily"]["temperature_2m_min"],
-                "t_media": data["daily"]["temperature_2m_mean"],
-                "anno": anno,
-            })
-            df["data"] = pd.to_datetime(df["data"])
-            df["offset_gg"] = (df["data"] - pd.Timestamp(data_ref)).dt.days
-            tutti.append(df)
-        except Exception as e:
-            continue
-        time.sleep(0.4)
-        
-    if not tutti:
-        return None
-    df_tutti = pd.concat(tutti, ignore_index=True)
-    profilo = df_tutti.groupby("offset_gg")[["t_max", "t_min", "t_media"]].mean().round(1).reset_index()
-    profilo["data"] = profilo["offset_gg"].apply(lambda x: OGGI + timedelta(days=x))
-    return profilo
 
 #Sottotitolo
 st.title("Analisi del clima estivo e luoghi per affrontare il caldo")
