@@ -175,7 +175,7 @@ def dati_orari(LAT, LON):
     except requests.RequestException as e:
         st.error(f"Errore API: {e}")
         return None
-
+"""
 @st.cache_data(ttl=86400)
 def profilo_medio_storico(anni, LAT, LON):
     mese_giorno = OGGI.strftime("%m-%d")
@@ -211,7 +211,8 @@ def profilo_medio_storico(anni, LAT, LON):
     profilo = df_tutti.groupby("hour")["t_aria"].mean().round(1).reset_index()
     profilo.columns = ["hour", "t_media_storica"]
     return profilo
-
+"""
+"""
 @st.cache_data(ttl=3600)
 def dati_ultimi_15gg(LAT, LON):
     start = (OGGI - timedelta(days=FINESTRA)).strftime("%Y-%m-%d")
@@ -303,7 +304,7 @@ def media_storica_finestra(anni, finestra, LAT, LON):
     profilo = df_tutti.groupby("offset_gg")[["t_max", "t_min", "t_media"]].mean().round(1).reset_index()
     profilo["data"] = profilo["offset_gg"].apply(lambda x: OGGI + timedelta(days=x))
     return profilo
-
+"""
 #Sottotitolo
 st.title("Analisi del clima estivo e luoghi per affrontare il caldo")
 st.subheader(f"Clima estivo di {città_selezionata}")
