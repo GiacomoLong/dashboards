@@ -200,9 +200,10 @@ def profilo_medio_storico(anni, LAT, LON):
             })
             df["ora"] = pd.to_datetime(df["ora"])
             tutti.append(df)
-            time.sleep(0.5)
         except Exception as e:
             continue
+        time.sleep(0.4)
+        
     if not tutti:
         return None
     df_tutti = pd.concat(tutti, ignore_index=True)
@@ -292,9 +293,10 @@ def media_storica_finestra(anni, finestra, LAT, LON):
             df["data"] = pd.to_datetime(df["data"])
             df["offset_gg"] = (df["data"] - pd.Timestamp(data_ref)).dt.days
             tutti.append(df)
-            time.sleep(0.5)
         except Exception as e:
             continue
+        time.sleep(0.4)
+        
     if not tutti:
         return None
     df_tutti = pd.concat(tutti, ignore_index=True)
