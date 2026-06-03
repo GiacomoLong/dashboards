@@ -10,6 +10,7 @@ import folium
 from streamlit_folium import st_folium
 import leafmap.foliumap as leafmap
 import streamlit.components.v1 as components
+import time
 
 #Titolo
 st.title("Analisi del clima estivo e luoghi per affrontare il caldo")
@@ -199,6 +200,7 @@ def profilo_medio_storico(anni, LAT, LON):
             })
             df["ora"] = pd.to_datetime(df["ora"])
             tutti.append(df)
+            time.sleep(0.5)
         except Exception as e:
             continue
     if not tutti:
@@ -290,6 +292,7 @@ def media_storica_finestra(anni, finestra, LAT, LON):
             df["data"] = pd.to_datetime(df["data"])
             df["offset_gg"] = (df["data"] - pd.Timestamp(data_ref)).dt.days
             tutti.append(df)
+            time.sleep(0.5)
         except Exception as e:
             continue
     if not tutti:
