@@ -7,3 +7,4 @@ osmnx
 folium
 streamlit-folium
 leafmap
+mapclassify
