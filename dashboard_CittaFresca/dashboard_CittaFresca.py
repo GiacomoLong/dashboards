@@ -5,6 +5,8 @@ import folium
 from streamlit_folium import st_folium
 import leafmap.foliumap as leafmap
 import streamlit.components.v1 as components
+import matplotlib.pyplot as plt
+import pandas as pd
 
 # ── TITOLO ───────────────────────────────────────────────
 st.title("Città Fresca")
