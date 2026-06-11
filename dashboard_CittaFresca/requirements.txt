@@ -1,8 +1,9 @@
 streamlit
-geopandas
-osmnx
-folium
+folium>=0.12
 leafmap
 streamlit-folium
+geopandas
+osmnx
+mapclassify
 matplotlib
 pandas
