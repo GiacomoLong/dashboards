@@ -132,7 +132,7 @@ COD  = CITTA[città_selezionata]["cod"]
 # ════════════════════════════════════════════════════════
 address = st.text_input('Dove sei?')
 
-ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImRlODNkNDYxMmUyOTQwM2VhZWVjNDA2ZWIxZjFlYmI0IiwiaCI6Im11cm11cjY0In0='
+ORS_API_KEY = st.secrets['ORS_API_KEY']
 
 @st.cache_data
 def geocode(query):
