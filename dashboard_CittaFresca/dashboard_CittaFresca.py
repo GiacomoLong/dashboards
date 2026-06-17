@@ -5,8 +5,7 @@ import folium
 from streamlit_folium import st_folium
 import leafmap.foliumap as leafmap
 import streamlit.components.v1 as components
-import matplotlib.pyplot as plt
-import pandas as pd
+import requests
 
 # ── TITOLO ───────────────────────────────────────────────
 st.title("Città Fresca")
@@ -131,6 +130,30 @@ COD  = CITTA[città_selezionata]["cod"]
 # ════════════════════════════════════════════════════════
 # FUNZIONI DATI GEOGRAFICI
 # ════════════════════════════════════════════════════════
+address = st.text_input('Dove sei?')
+
+ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImRlODNkNDYxMmUyOTQwM2VhZWVjNDA2ZWIxZjFlYmI0IiwiaCI6Im11cm11cjY0In0='
+
+@st.cache_data
+def geocode(query):
+    parameters = {'api_key': ORS_API_KEY, 'text': query}
+    try:
+        response = requests.get(
+            'https://api.openrouteservice.org/geocode/search',
+            params=parameters,
+            timeout=10
+        )
+        response.raise_for_status()
+        data = response.json()
+        if data.get('features'):
+            x, y = data['features'][0]['geometry']['coordinates']
+            return (y, x)
+        else:
+            st.warning("⚠️ Nessun risultato trovato per questo indirizzo")
+            return None
+    except requests.RequestException as e:
+        st.error(f"❌ Errore geocoding: {e}")
+        return None
 
 @st.cache_data
 def get_boundary(COD):
@@ -229,6 +252,21 @@ if not any([show_park, show_garden, show_swimming, show_pool,
 mappa = leafmap.Map(width=1200, height=600)
 mappa.add_basemap("CartoDB.Positron")
 mappa.zoom_to_gdf(boundary)
+
+# ── Dove sei ─────────────────────────────────────
+if address:
+    results = geocode(address)
+    if results:
+        folium.Marker(
+            location=results,
+            tooltip="Tu sei qui",
+            icon=folium.Icon(color='red', icon='map-marker', prefix='fa')
+        ).add_to(mappa)
+
+        # Centra la mappa sul marker invece che sul confine comunale
+        mappa.set_center(results[1], results[0], zoom=15)
+    else:
+        st.error('Nessun risultato per questo indirizzo')
 
 # ── Confine comunale ─────────────────────────────────────
 boundary.explore(
