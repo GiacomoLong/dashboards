@@ -130,7 +130,10 @@ COD  = CITTA[città_selezionata]["cod"]
 # ════════════════════════════════════════════════════════
 # FUNZIONI DATI GEOGRAFICI
 # ════════════════════════════════════════════════════════
-address = st.text_input('Dove sei?')
+address = st.text_input(
+    'Dove sei? (Inserisci l'indirizzo)',
+    placeholder="es. Via Roma 10, Padova"
+)
 
 ORS_API_KEY = st.secrets['ORS_API_KEY']
 
