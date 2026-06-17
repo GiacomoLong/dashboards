@@ -7,3 +7,4 @@ osmnx
 mapclassify
 matplotlib
 pandas
+requests
