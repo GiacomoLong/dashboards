@@ -131,7 +131,7 @@ COD  = CITTA[città_selezionata]["cod"]
 # FUNZIONI DATI GEOGRAFICI
 # ════════════════════════════════════════════════════════
 address = st.text_input(
-    "Dove sei? Inserisci l'indirizzo",
+    "Dove sei? Dopo aver scelto la città, inserisci l'indirizzo",
     placeholder="es. Via Roma 10, Padova"
 )
 
