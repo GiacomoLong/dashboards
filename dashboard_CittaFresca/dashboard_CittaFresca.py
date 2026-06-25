@@ -8,7 +8,7 @@ import streamlit.components.v1 as components
 import requests
 
 # ── TITOLO ───────────────────────────────────────────────
-st.title("Oasi Urbane")
+st.title("🗺️ Oasi Urbane — Mappa dei luoghi di refrigerio nelle città italiane")
 
 # ── DIZIONARIO CITTÀ ─────────────────────────────────────
 CITTA = {
