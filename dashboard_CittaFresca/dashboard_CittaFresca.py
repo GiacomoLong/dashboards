@@ -8,7 +8,7 @@ import streamlit.components.v1 as components
 import requests
 
 # ── TITOLO ───────────────────────────────────────────────
-st.title("Città Fresca")
+st.title("Oasi Urbane")
 
 # ── DIZIONARIO CITTÀ ─────────────────────────────────────
 CITTA = {
